@@ -54,6 +54,14 @@
         chdir: "{{ infra_repo.dest }}/scripts/vm-setup"
 
     # --------------------------------------------
+    # reboot after updates
+    # --------------------------------------------
+    - name: "reboot after updates"
+      become: true
+      ansible.builtin.reboot:
+        reboot_timeout: 30
+
+    # --------------------------------------------
     # docker install
     # --------------------------------------------
     - name: "install docker"

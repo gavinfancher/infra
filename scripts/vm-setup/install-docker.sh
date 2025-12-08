@@ -15,6 +15,6 @@ https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo ${UBUNTU_CO
 sudo apt-get update
 sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-sudo usermod -aG docker $(whoami)
+TARGET_USER="${TARGET_USER:-$(whoami)}"
+sudo usermod -aG docker "$TARGET_USER"
 
-newgrp docker
