@@ -13,5 +13,6 @@ sudo apt-get install -y \
   curl \
   btop \
   neovim \
+  avahi-daemon \
 
 echo "basics installed successfully"

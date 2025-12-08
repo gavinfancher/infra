@@ -82,7 +82,7 @@
         chdir: "{{ infra_repo.dest }}/scripts/vm-setup"
       environment:
         TS_KEY: "{{ tailscale_auth_key }}"
-        TS_HOSTNAME: "{{ inventory_hostname }}"
+        TS_HOSTNAME: "{{ ansible_hostname }}"
 
     # --------------------------------------------
     # get tailscale ip
