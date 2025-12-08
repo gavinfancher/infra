@@ -1,7 +1,33 @@
 all:
-  hosts:
-    pi-hole:
-      ansible_host: 10.0.0.149
-      ansible_user: ubuntu
-  vars:
-    ansible_ssh_common_args: '-o ProxyJump=root@{{ proxmox_host }} -o ForwardAgent=yes'
+  children:
+    # --------------------------------------------
+    # Local VMs (OrbStack, etc.) - no proxy needed
+    # --------------------------------------------
+    local:
+      hosts:
+        orb:
+          ansible_host: orb@orb
+          ansible_user: gavin
+      vars:
+        ansible_ssh_common_args: ''
+
+    # --------------------------------------------
+    # Proxmox VMs - proxy through pve host
+    # --------------------------------------------
+    pve:
+      hosts:
+        # pi-hole:
+        #   ansible_host: 10.0.0.53
+      vars:
+        ansible_user: ubuntu
+        ansible_ssh_common_args: '-o ProxyJump=root@{{ proxmox_host }}'
+
+    # --------------------------------------------
+    # Cloud VMs - direct SSH (same setup as pve)
+    # --------------------------------------------
+    cloud:
+      hosts:
+        # example-cloud-vm:
+        #   ansible_host: 1.2.3.4
+      vars:
+        ansible_user: ubuntu

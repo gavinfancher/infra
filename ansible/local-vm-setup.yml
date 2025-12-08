@@ -54,13 +54,12 @@
         chdir: "{{ infra_repo.dest }}/scripts/vm-setup"
 
     # --------------------------------------------
-    # reboot after updates
+    # reboot after updates -- disabled for local VMs because orbstack doesnt play nice with reboots
     # --------------------------------------------
-    - name: "reboot after updates"
-      become: true
-      ansible.builtin.reboot:
-        reboot_timeout: 30
-      when: "'local' not in group_names"
+    # - name: "reboot after updates"
+    #   become: true
+    #   ansible.builtin.reboot:
+    #     reboot_timeout: 30
 
     # --------------------------------------------
     # docker install

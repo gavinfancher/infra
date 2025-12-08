@@ -11,7 +11,7 @@ sudo apt-get upgrade -y
 sudo apt-get install -y \
   curl \
   btop \
-  neovim \
+  vim \
   avahi-daemon \
 
 echo "basics installed successfully"
