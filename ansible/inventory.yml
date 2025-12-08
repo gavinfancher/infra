@@ -1,7 +1,7 @@
 all:
   hosts:
     pi-hole:
-      ansible_host: 10.0.0.53
+      ansible_host: 10.0.0.116
       ansible_user: ubuntu
   vars:
-    ansible_ssh_common_args: '-o ProxyJump=root@{{ proxmox_host }}'
+    ansible_ssh_common_args: '-o ProxyJump=root@{{ proxmox_host }} -o ForwardAgent=yes'

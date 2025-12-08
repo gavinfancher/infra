@@ -9,79 +9,82 @@
   vars:
     tailscale_auth_key: "{{ lookup('community.general.onepassword', 'tailscale', field='auth-key', vault='infra-secrets') }}"
 
-    target_repo:
+    infra_repo:
       enabled: true
       url: https://github.com/gavinfancher/infra.git
       version: main
       dest: /opt/infra
-      scripts:
-        - cmd: ./install-docker.sh
-          env:
-            TARGET_USER: "{{ ansible_user }}"
-        - cmd: ./install-tailscale.sh
-          env:
-            TS_KEY: "{{ tailscale_auth_key }}"
-            TS_HOSTNAME: "{{ inventory_hostname }}"
 
   tasks:
-    - name: Install git
+    # --------------------------------------------
+    # clone infra repo (need git first)
+    # --------------------------------------------
+    - name: "install git"
       become: true
       ansible.builtin.apt:
         name: git
         state: present
         update_cache: true
 
-    - name: Clone target repo
+    - name: "clone infra repo"
       become: true
       ansible.builtin.git:
-        repo: "{{ target_repo.url }}"
-        dest: "{{ target_repo.dest }}"
-        version: "{{ target_repo.version }}"
+        repo: "{{ infra_repo.url }}"
+        dest: "{{ infra_repo.dest }}"
+        version: "{{ infra_repo.version }}"
         force: true
-      when: target_repo.enabled
+        accept_hostkey: true
+      when: infra_repo.enabled
 
-    - name: Make scripts executable
+    - name: "make scripts executable"
       become: true
       ansible.builtin.file:
-        path: "{{ target_repo.dest }}/scripts/vm-setup"
+        path: "{{ infra_repo.dest }}/scripts/vm-setup"
         mode: "0755"
         recurse: true
-      when: target_repo.enabled
+      when: infra_repo.enabled
 
-    - name: Run setup scripts
+    # --------------------------------------------
+    # install basics (updates, curl, btop, etc.)
+    # --------------------------------------------
+    - name: "install basics"
       become: true
       ansible.builtin.command:
-        cmd: "{{ item.cmd }}"
-        chdir: "{{ target_repo.dest }}/scripts/vm-setup"
-      environment: "{{ item.env | default({}) }}"
-      loop: "{{ target_repo.scripts }}"
-      when: target_repo.enabled
-      register: script_results
-      changed_when: true
+        cmd: ./install-basics.sh
+        chdir: "{{ infra_repo.dest }}/scripts/vm-setup"
 
-    - name: Clean up cloned repo
+    # --------------------------------------------
+    # docker install
+    # --------------------------------------------
+    - name: "install docker"
       become: true
-      ansible.builtin.file:
-        path: "{{ target_repo.dest }}"
-        state: absent
-      when: target_repo.enabled
+      ansible.builtin.command:
+        cmd: ./install-docker.sh
+        chdir: "{{ infra_repo.dest }}/scripts/vm-setup"
+      environment:
+        TARGET_USER: "{{ ansible_user }}"
 
-    - name: Verify setup
-      block:
-        - name: Check Docker is running
-          ansible.builtin.command:
-            cmd: docker --version
-          register: docker_version
-          changed_when: false
+    # --------------------------------------------
+    # tailscale install
+    # --------------------------------------------
+    - name: "install tailscale"
+      become: true
+      ansible.builtin.command:
+        cmd: ./install-tailscale.sh
+        chdir: "{{ infra_repo.dest }}/scripts/vm-setup"
+      environment:
+        TS_KEY: "{{ tailscale_auth_key }}"
+        TS_HOSTNAME: "{{ inventory_hostname }}"
 
-        - name: Check Tailscale status
-          ansible.builtin.command:
-            cmd: tailscale status
-          register: tailscale_status
-          changed_when: false
+    # --------------------------------------------
+    # get tailscale ip
+    # --------------------------------------------
+    - name: "get tailscale ip"
+      become: true
+      ansible.builtin.command:
+        cmd: tailscale ip -4
+      register: tailscale_ip
 
-        - name: Display results
-          ansible.builtin.debug:
-            msg:
-              - "Docker: {{ docker_version.stdout }}"
-              - "Tailscale: {{ tailscale_status.stdout_lines[0] | default('Connected') }}"
+    - name: "output tailscale ip"
+      ansible.builtin.debug:
+        msg: "{{ ansible_user }}@{{ tailscale_ip.stdout }}"
