@@ -1,3 +1,5 @@
 
 
 .DS_Store
+.env
+ansible/local_vars.yml

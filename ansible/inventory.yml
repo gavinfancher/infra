@@ -1,17 +1,7 @@
 all:
   hosts:
-    # Add your VM hosts here
-    # example-vm:
-    #   ansible_host: 192.168.1.100
-    #   ansible_user: ubuntu
-    #   ts_hostname: my-vm-name
+    pi-hole:
+      ansible_host: 10.0.0.53
+      ansible_user: ubuntu
   vars:
-    ansible_user: ubuntu
-    ansible_python_interpreter: /usr/bin/python3
-    # GitHub repo to clone
-    infra_repo: "https://github.com/YOUR_USERNAME/infra.git"
-    infra_dest: "/tmp/infra"
-    # 1Password item reference for Tailscale auth key
-    # Format: op://vault/item/field
-    op_tailscale_key_ref: "op://Private/Tailscale Auth Key/credential"
-
+    ansible_ssh_common_args: '-o ProxyJump=root@{{ proxmox_host }}'

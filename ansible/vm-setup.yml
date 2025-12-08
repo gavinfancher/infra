@@ -3,9 +3,25 @@
   hosts: all
   become: false
 
+  vars_files:
+    - local_vars.yml
+
   vars:
-    # Fetch Tailscale auth key from 1Password using op CLI (run locally)
-    tailscale_auth_key: "{{ lookup('pipe', 'op read \"' ~ op_tailscale_key_ref ~ '\"') }}"
+    tailscale_auth_key: "{{ lookup('community.general.onepassword', 'tailscale', field='auth-key', vault='infra-secrets') }}"
+
+    target_repo:
+      enabled: true
+      url: https://github.com/gavinfancher/infra.git
+      version: main
+      dest: /opt/infra
+      scripts:
+        - cmd: ./install-docker.sh
+          env:
+            TARGET_USER: "{{ ansible_user }}"
+        - cmd: ./install-tailscale.sh
+          env:
+            TS_KEY: "{{ tailscale_auth_key }}"
+            TS_HOSTNAME: "{{ inventory_hostname }}"
 
   tasks:
     - name: Install git
@@ -15,63 +31,40 @@
         state: present
         update_cache: true
 
-    - name: Clone infra repo from GitHub
+    - name: Clone target repo
+      become: true
       ansible.builtin.git:
-        repo: "{{ infra_repo }}"
-        dest: "{{ infra_dest }}"
-        version: main
+        repo: "{{ target_repo.url }}"
+        dest: "{{ target_repo.dest }}"
+        version: "{{ target_repo.version }}"
         force: true
+      when: target_repo.enabled
 
     - name: Make scripts executable
+      become: true
       ansible.builtin.file:
-        path: "{{ infra_dest }}/scripts/vm-setup"
+        path: "{{ target_repo.dest }}/scripts/vm-setup"
         mode: "0755"
         recurse: true
+      when: target_repo.enabled
 
-    # --- Docker Installation ---
-    - name: Run Docker install script
-      ansible.builtin.command:
-        cmd: "{{ infra_dest }}/scripts/vm-setup/install-docker.sh"
-      args:
-        creates: /usr/bin/docker
-      register: docker_result
-      changed_when: docker_result.rc == 0
-
-    # --- Tailscale Installation ---
-    - name: Install Tailscale
-      become: true
-      ansible.builtin.shell: |
-        curl -fsSL https://tailscale.com/install.sh | sh
-      args:
-        creates: /usr/bin/tailscale
-
-    - name: Set Tailscale operator
+    - name: Run setup scripts
       become: true
       ansible.builtin.command:
-        cmd: tailscale set --operator={{ ansible_user }}
-      changed_when: true
-
-    - name: Bring up Tailscale with auth key from 1Password
-      become: true
-      ansible.builtin.command:
-        cmd: >
-          tailscale up
-          --authkey={{ tailscale_auth_key }}
-          --hostname={{ ts_hostname | default(inventory_hostname) }}
-      register: tailscale_up
-      changed_when: "'Success' in tailscale_up.stdout or tailscale_up.rc == 0"
-      failed_when: tailscale_up.rc != 0
-
-    - name: Enable Tailscale auto-update
-      become: true
-      ansible.builtin.command:
-        cmd: tailscale set --auto-update=true
+        cmd: "{{ item.cmd }}"
+        chdir: "{{ target_repo.dest }}/scripts/vm-setup"
+      environment: "{{ item.env | default({}) }}"
+      loop: "{{ target_repo.scripts }}"
+      when: target_repo.enabled
+      register: script_results
       changed_when: true
 
     - name: Clean up cloned repo
+      become: true
       ansible.builtin.file:
-        path: "{{ infra_dest }}"
+        path: "{{ target_repo.dest }}"
         state: absent
+      when: target_repo.enabled
 
     - name: Verify setup
       block:
@@ -92,4 +85,3 @@
             msg:
               - "Docker: {{ docker_version.stdout }}"
               - "Tailscale: {{ tailscale_status.stdout_lines[0] | default('Connected') }}"
-
