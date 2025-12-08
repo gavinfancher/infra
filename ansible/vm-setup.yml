@@ -63,7 +63,7 @@
       ansible.builtin.copy:
         src: "{{ infra_repo.dest }}/ref/.bashrc"
         dest: "/home/{{ ansible_user }}/.bashrc"
-        #remote_src: true
+        remote_src: true
         force: true
     
     # --------------------------------------------
