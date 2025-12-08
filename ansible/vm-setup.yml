@@ -13,7 +13,7 @@
       enabled: true
       url: https://github.com/gavinfancher/infra.git
       version: main
-      dest: /opt/infra
+      dest: ~/
 
   tasks:
     # --------------------------------------------
