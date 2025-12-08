@@ -1,0 +1,95 @@
+---
+- name: Setup new VMs with Docker and Tailscale
+  hosts: all
+  become: false
+
+  vars:
+    # Fetch Tailscale auth key from 1Password using op CLI (run locally)
+    tailscale_auth_key: "{{ lookup('pipe', 'op read \"' ~ op_tailscale_key_ref ~ '\"') }}"
+
+  tasks:
+    - name: Install git
+      become: true
+      ansible.builtin.apt:
+        name: git
+        state: present
+        update_cache: true
+
+    - name: Clone infra repo from GitHub
+      ansible.builtin.git:
+        repo: "{{ infra_repo }}"
+        dest: "{{ infra_dest }}"
+        version: main
+        force: true
+
+    - name: Make scripts executable
+      ansible.builtin.file:
+        path: "{{ infra_dest }}/scripts/vm-setup"
+        mode: "0755"
+        recurse: true
+
+    # --- Docker Installation ---
+    - name: Run Docker install script
+      ansible.builtin.command:
+        cmd: "{{ infra_dest }}/scripts/vm-setup/install-docker.sh"
+      args:
+        creates: /usr/bin/docker
+      register: docker_result
+      changed_when: docker_result.rc == 0
+
+    # --- Tailscale Installation ---
+    - name: Install Tailscale
+      become: true
+      ansible.builtin.shell: |
+        curl -fsSL https://tailscale.com/install.sh | sh
+      args:
+        creates: /usr/bin/tailscale
+
+    - name: Set Tailscale operator
+      become: true
+      ansible.builtin.command:
+        cmd: tailscale set --operator={{ ansible_user }}
+      changed_when: true
+
+    - name: Bring up Tailscale with auth key from 1Password
+      become: true
+      ansible.builtin.command:
+        cmd: >
+          tailscale up
+          --authkey={{ tailscale_auth_key }}
+          --hostname={{ ts_hostname | default(inventory_hostname) }}
+      register: tailscale_up
+      changed_when: "'Success' in tailscale_up.stdout or tailscale_up.rc == 0"
+      failed_when: tailscale_up.rc != 0
+
+    - name: Enable Tailscale auto-update
+      become: true
+      ansible.builtin.command:
+        cmd: tailscale set --auto-update=true
+      changed_when: true
+
+    - name: Clean up cloned repo
+      ansible.builtin.file:
+        path: "{{ infra_dest }}"
+        state: absent
+
+    - name: Verify setup
+      block:
+        - name: Check Docker is running
+          ansible.builtin.command:
+            cmd: docker --version
+          register: docker_version
+          changed_when: false
+
+        - name: Check Tailscale status
+          ansible.builtin.command:
+            cmd: tailscale status
+          register: tailscale_status
+          changed_when: false
+
+        - name: Display results
+          ansible.builtin.debug:
+            msg:
+              - "Docker: {{ docker_version.stdout }}"
+              - "Tailscale: {{ tailscale_status.stdout_lines[0] | default('Connected') }}"
+
