@@ -53,6 +53,17 @@
         cmd: ./install-basics.sh
         chdir: "{{ infra_repo.dest }}/scripts/vm-setup"
 
+
+
+    # --------------------------------------------
+    # copy bashrc
+    # --------------------------------------------
+    - name: "copy bashrc"
+      ansible.builtin.copy:
+        src: "{{ infra_repo.dest }}/ref/.bashrc"
+        dest: "/home/{{ ansible_user }}/.bashrc"
+        force: true
+    
     # --------------------------------------------
     # reboot after updates
     # --------------------------------------------
