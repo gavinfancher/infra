@@ -1,7 +1,7 @@
 all:
   children:
     # --------------------------------------------
-    # Local VMs (OrbStack, etc.) - no proxy needed
+    # for local VMs so no need for proxy 
     # --------------------------------------------
     local:
       hosts:
@@ -12,7 +12,7 @@ all:
         ansible_ssh_common_args: ''
 
     # --------------------------------------------
-    # Proxmox VMs - proxy through pve host
+    # for VMs on my proxmox hardware - proxy through root
     # --------------------------------------------
     pve:
       hosts:
@@ -23,7 +23,7 @@ all:
         ansible_ssh_common_args: '-o ProxyJump=root@{{ proxmox_host }}'
 
     # --------------------------------------------
-    # Cloud VMs - direct SSH (same setup as pve)
+    # for cloud VMs like aws or gcp
     # --------------------------------------------
     cloud:
       hosts:
@@ -31,3 +31,4 @@ all:
         #   ansible_host: 1.2.3.4
       vars:
         ansible_user: ubuntu
+        ansible_ssh_common_args: ''
