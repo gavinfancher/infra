@@ -18,6 +18,12 @@ all:
       hosts:
         # pi-hole:
         #   ansible_host: 10.0.0.53
+          docker-01:
+            ansible_host: 10.0.0.32
+          docker-02:
+            ansible_host: 10.0.0.110
+          docker-03:
+            ansible_host: 10.0.0.105
       vars:
         ansible_user: ubuntu
         ansible_ssh_common_args: '-o ProxyJump=root@{{ proxmox_host }}'
