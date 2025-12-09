@@ -1,5 +1,5 @@
 ---
-- name: Setup new VMs with Docker and Tailscale
+- name: seting up a new vm
   hosts: all
   become: false
 
@@ -52,8 +52,6 @@
       ansible.builtin.command:
         cmd: ./install-basics.sh
         chdir: "{{ infra_repo.dest }}/scripts/vm-setup"
-
-
 
     # --------------------------------------------
     # copy bashrc
@@ -109,4 +107,4 @@
 
     - name: "output tailscale ip"
       ansible.builtin.debug:
-        msg: "{{ ansible_user }}@{{ tailscale_ip.stdout }}"
+        msg: "ssh {{ ansible_user }}@{{ tailscale_ip.stdout }}"

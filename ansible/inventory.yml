@@ -27,8 +27,8 @@ all:
     # --------------------------------------------
     cloud:
       hosts:
-        # example-cloud-vm:
-        #   ansible_host: 1.2.3.4
+        # aws-01-example:
+        #   ansible_host: ip or public dns (aws likes to do that)
       vars:
         ansible_user: ubuntu
         ansible_ssh_common_args: ''
